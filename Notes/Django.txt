@@ -1,0 +1,9 @@
+DJANGO:
+-> Python web developement framework.
+-> Whatever happens in the frontend will be the same (HTML, CSS, Javascript)
+-> Framework is a third party module which we install on our system 
+-> We use it's utility functionalities and methods (for managing sessions, authentication, file uploads)
+-> It's called a framework as it not only provides us tools to use but also provides guidance on how to use them.
+-> Built for Python 3.x (latest version of python)
+-> Batteries included approach (offers built-in solutions and features for basically all problems)
+-> Can also be customizable and extensible
