@@ -7,3 +7,83 @@ DJANGO:
 -> Built for Python 3.x (latest version of python)
 -> Batteries included approach (offers built-in solutions and features for basically all problems)
 -> Can also be customizable and extensible
+
+
+NOTE: To list all the installed packages in pip, do:
+e.g) pip list
+
+
+CREATING A DJANGO PROJECT:
+-> To create a django project, run
+e.g)
+django-admin startproject <project_name>
+
+
+
+ANALYZING THE CREATED PROJECT:
+-> The manage.py file should not be touched.
+-> The manage.py file gives us access to built in django commands.
+-> The __init__.py file is empty and it's only purpose is to make the folder a python module(package).
+-> The asgi.py and wsgi.py python files are used while deploying the project.
+-> The setting.py and the urls.py files are the files which we are allowed to edit.
+-> The db.sqlite3 file is a dummy database we can use.
+
+
+
+STARTING A DEVELOPMENT SERVER:
+-> To start a developement server we do:
+e.g)
+python manage.py runserver
+            (OR)
+python3 manage.py runserver
+
+
+
+DJANGO APPS:
+-> To handle different functionalities in our project, we use django apps(This follows a modular structure).
+-> To create an app, do:
+e.g)
+python manage.py startapp <app_name>
+-> Each app acts as a singular microservice.
+
+
+
+ANALYZING THE CREATED APP:
+-> The migrations folder is empty but is important for databases and models.
+-> The admin.py file comes in handy when dealing with the administration part of the project.
+-> The apps.py file configures the app created. It is needed when we want to connect multiple apps.
+-> The models.py file is also important for databases and models.
+-> The tests.py file helps with automated testing and unit tests.
+-> The views.py file has logic which determines what we show to the user.
+
+
+
+VIRTUAL ENVIRONMENT SETUP:
+-> To install virtualenv, do:
+e.g)
+pip install virtualenv
+
+-> To set up a virtual environment, do:
+e.g)
+python -m venv <virtualenv_name>
+
+-> To activate the virtual environment, just do:
+e.g)
+<virtualenv_name>\Scripts\activate
+
+-> Install all necessary packages after activating the virtual environment.
+e.g)
+pip install django
+django-admin startproject <project_name> .          (This dot creates the django project in the same virtual environment folder)
+
+-> To deactivate the virtual environment, just do:
+e.g)
+deactivate
+
+
+
+GITIGNORE FILE FOR DJANGO:
+-> Add all requirements to a requirements.txt file.
+-> Add the name of the virtual environment to the .gitignore file
+e.g)
+venv/
