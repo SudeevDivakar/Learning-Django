@@ -87,3 +87,158 @@ GITIGNORE FILE FOR DJANGO:
 -> Add the name of the virtual environment to the .gitignore file
 e.g)
 venv/
+
+
+
+CREATING VIEWS AND URLS:
+-> To create views, we write functions in the views.py file.
+-> This function recieves a parameter (request) which contains the request information.
+-> We return a response from this function using the HttpResponse method.
+e.g)
+from django.shortcuts import render
+from django.http import HttpResponse
+
+# Create your views here.
+
+def index(request):
+    return HttpResponse('This works')
+
+-> To specify urls, we create a new file called urls.py and add the urls to a list.
+-> Each element of this list will be converted into a valid path using the path method.
+-> The first parameter to this path method is the url path which we want to specify and the second is the corresponding function that will be triggered from the views.py file.
+e.g)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("january", views.index)
+]
+
+-> We then connect the urls from each app to the main project folder.
+e.g)
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('challenges/', include("challenges.urls"))
+]
+
+
+DYNAMIC PATH SEGMENTS:
+-> To set up a dynamic path segment, in the urlpatterns list of the app, enclose the variable path name inside <> brackets.
+e.g)
+urlpatterns = [
+    path("<month>", views.monthly_challenge)
+]
+-> In the views.py file, we accept an additional parameter with the same name as the variable path
+e.g)
+def monthly_challenge(request, month):
+    if month == 'january':
+        return HttpResponse('Eat more protein')
+    elif month == 'february':
+        return HttpResponse('Drink more water')
+    elif month == 'march':
+        return HttpResponse('Go to gym more')
+    else:
+        return HttpResponseNotFound('This month is not supported')
+
+
+THROWING NOT FOUND ERRORS:
+-> To do this, just import the HttpResponseNotFound function and return the appropriate message in that.
+e.g)
+from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseNotFound
+def monthly_challenge(request, month):
+    if month == 'january':
+        return HttpResponse('Eat more protein')
+    elif month == 'february':
+        return HttpResponse('Drink more water')
+    elif month == 'march':
+        return HttpResponse('Go to gym more')
+    else:
+        return HttpResponseNotFound('This month is not supported')
+
+
+PATH CONVERTERS:
+-> To convert the variable paths into a specific type we can use path converters.
+-> To use these path parameters we can specify the datatype before the path variables:
+e.g)
+urlpatterns = [
+    path("<int:month>", views.monthly_challenge_by_number),
+    path("<str:month>", views.monthly_challenge)
+]
+
+
+REDIRECTING:
+-> To redirect to a different URL, we use the HttpResponseRedirect function to redirect to the required URL.
+e.g)
+from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+
+def monthly_challenge_by_number(request, month):
+    try:
+        months = list(monthly_challenges.keys())
+        redirectMonth = months[month-1]
+        return HttpResponseRedirect("/challenges/" + redirectMonth)
+    except:
+        return HttpResponseNotFound('This month is not supported')
+
+
+
+REVERSE FUNCTIONS AND NAMED URLS:
+-> In case the main URL changes and we try to redirect to a URL that does exist (has been changed), then this would result in an error.
+-> To avoid this error, we give the URLs a name and use the reverse function to build a URL for this name.
+-> We can provide a name for these URLs by passing in a third argument to the path function in urls.py
+e.g)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("<int:month>", views.monthly_challenge_by_number),
+    path("<str:month>", views.monthly_challenge, name="month-challenge")
+]
+
+-> To build a URL for a specific named URL, we use the reverse function.
+-> The first argument to this reverse function is the name of the URL. The second argument is a list of args which contains values for variable path params.
+e.g)
+from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.urls import reverse
+
+def monthly_challenge_by_number(request, month):
+    try:
+        months = list(monthly_challenges.keys())
+        redirectMonth = months[month-1]
+        redirectPath = reverse("month-challenge", args=[redirectMonth])     #builds a path like /challenges/<month>    #for a path with multiple path params, we provide multiple values
+        return HttpResponseRedirect(redirectPath)
+    except:
+        return HttpResponseNotFound('This month is not supported')
+
+
+
+RETURNING HTML:
+-> Instead of only returning plain text, we can return html tags instead.
+-> We do this by using f-strings.
+e.g)
+text = "lol"
+htmlString = f"<h1>{text}</h1>" 
+
+e.g)
+def monthly_challenge(request, month):
+    try:
+        challengeText = monthly_challenges[month]
+        responseData = f'<h1 style="color: blue">{challengeText}</h1>'
+        return HttpResponse(responseData)
+    except:
+        return HttpResponseNotFound('This month is not supported')
+
+
+SPECIFYING ROOT PATHS:
+-> To specify root paths just provide an empty string.
+e.g)
+urlpatterns = [
+    path("",views.index),
+    path("<int:month>", views.monthly_challenge_by_number),
+    path("<str:month>", views.monthly_challenge, name="month-challenge")
+]
