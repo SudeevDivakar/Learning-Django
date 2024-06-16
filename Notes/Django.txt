@@ -242,3 +242,409 @@ urlpatterns = [
     path("<int:month>", views.monthly_challenge_by_number),
     path("<str:month>", views.monthly_challenge, name="month-challenge")
 ]
+
+
+
+TEMPLATES:
+-> Pretty much EJS from javascript.
+-> They are html documents which can handle dynamic content.
+-> We create a folder inside the app called 'templates' and another subfolder with the same name as the app.
+-> The html files are added into this subfolder.
+
+
+
+RETURNING TEMPLATES IN THE HTTP RESPONSE:
+-> The way we return html templates in the response is by converting it into a string.
+-> We convert it into a string using the render_to_string function from the django.template.loader module.
+-> The input parameter which we give to the render_to_string function is the path to the html template from the templates directory.
+e.g)
+def monthly_challenge(request, month):
+    try:
+        challengeText = monthly_challenges[month]
+        responseData = render_to_string("challenges/challenge.html")
+        return HttpResponse(responseData)
+    except:
+        return HttpResponseNotFound('This month is not supported')
+
+-> This will not immediately work however as the django project will not be able to locate the required templates folder.
+-> To fix this, we need to make changes to the settings.py file.
+-> Here, to the TEMPLATES list, we add the specific absolute directory to the DIRS sublist.
+-> Append the required templates path to the BASE_DIR (path to the django project) variable and put it in the DIRS list.
+e.g)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            BASE_DIR / "challenges" / "templates"
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+-> Although this works, it is not exactly dynamic as if the name of any folder changes, this will throw an error.
+-> But in the case of apps that are not present in our django project, we can only use this way
+
+
+
+BETTER WAY TO MAKE THE TEMPLATES FOLDER VISIBLE:
+-> Instead of adding the path of the templates folder to the DIRS list, we can notify django about the existence of our app.
+-> This would enable django to automatically search all the mentioned apps to find the appropriate templates directory.
+-> To do this, in the settings.py file, inside the INSTALLED_APPS list, we can add our app name.
+e.g)
+INSTALLED_APPS = [
+    'challenges',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+]
+-> This works well for apps present within our django project as it makes it dynamic but does not work for directories outside the django project.
+
+
+
+NOTE:- It's best practice to create another folder under the templates folder with the same name as the app so that if there are html templates with the same name but in different apps they won't get mixed up with each other.
+
+
+
+RETURNING TEMPLATES USING THE RENDER FUNCTION:
+-> Instead of using the render_to_string function to convert the html to a string and returning that string as a http response, we can simplify this by directly using the render function.
+-> The render function takes two arguments, the first one is the request object and the second is the path to the template.
+e.g)
+from django.shortcuts import render
+
+def monthly_challenge(request, month):
+    try:
+        """Directly rendering the html documents using the render function"""
+        return render(request, "challenges/challenge.html")
+    except:
+        return HttpResponseNotFound('This month is not supported')  
+
+
+
+DJANGO TEMPLATE LANGUAGE:
+-> Similar to EJS.
+-> Enhanced html files to create dynamic pages.
+-> We pass a dictionary as the third argument to the render function where the keys can be used as variables in the html file.
+-> Whenever we want to use these variables in the html file, we must use them in between {{ }}
+e.g)
+# views.py file
+from django.shortcuts import render
+
+def monthly_challenge(request, month):
+    try:
+        challengeText = monthly_challenges[month]
+        """Directly rendering the html documents using the render function"""
+        return render(request, "challenges/challenge.html",{
+            "text": challengeText,
+            "month": month.capitalize()
+        })
+    except:
+        return HttpResponseNotFound('This month is not supported')
+
+#HTML file
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{month}}'s challenge</title>
+  </head>
+  <body>
+    <h1>{{month}}'s challenge</h1>
+    <h2>{{text}}</h2>
+  </body>
+</html>
+
+
+
+FILTERS:
+-> These are little adjustments/transformations we can apply to the values which we are outputting with interpolation.
+-> We can use these to perform adjustments in the template rather than the views.py file before sending it to the template.
+e.g)
+{{ value|add:"2" }}
+-> We always use filters by adding a "|" after the value we want to output followed by the filter we want to apply.
+-> For capitalizing the first letter of a word, we can use the "title" filter.
+e.g)
+<h1>{{ month|title }}'s challenge</h1>
+-> Access the following link to learn about more filters:
+e.g)
+https://docs.djangoproject.com/en/5.0/ref/templates/builtins/#built-in-filter-reference
+
+
+
+TAGS:
+-> Syntax Feature built into the django template language.
+-> Helpful for outputting data in a certain required format.
+
+
+
+FOR TAG:
+-> Used to iterate through a given list of items.
+-> We use {% %} to write out the for tag. The for statement is just python.
+-> To specify where we end the for loop, we need to specify a {% endfor %} statement.
+-> This is because indentation is not considered in the html template.
+e.g)
+<body>
+    <ul>
+        {% for month in months %}
+            <li><a href="/challenges/{{ month }}">{{ month|title }}</a></li>
+        {% endfor %}
+    </ul>
+</body> 
+-> This example makes use of a hardcoded href path.
+
+
+
+URL TAG FOR DYNAMIC URLs:
+-> Since the above example makes use of a hardcoded href path and hence is not completely dynamic.
+-> To dynamically generate the path we can use the url tag.
+-> It is equivalent to the reverse function.
+e.g)
+<body>
+    <ul>
+      {% for month in months %}
+        <li><a href="{% url "month-challenge" month %}">{{ month|title }}</a></li>
+      {% endfor %}
+    </ul>
+</body>
+-> Over here "month-challenge" is the name of the path we are building.
+-> And all the variables specified after it are the dynamic segments of the path.
+-> We just provide the values/variables seperated by white spaces for the segments.
+-> We do not need a closing tag for the URL tag.
+
+
+
+WORKING WITH CONDITIONAL CONTENT:
+-> We use the "if" tag to work with conditional statements.
+-> Also present with the "if" tags are "elif" and "else" tags.
+-> We also need a closing tag for the "if" tag.
+e.g)
+<body>
+    <h1>{{ month|title }}'s Challenge</h1>
+    {% if text %}
+    <h2>{{text}}</h2>
+    {% else %}
+    <h2>No Challenge has been set for this month</h2>
+    {% endif %}
+</body>
+-> Not closing the if tag throws an error.
+
+
+
+TEMPLATE INHERITANCE:
+-> We might have a similar template skeleton for all or many web pages in our project.
+-> To reduce the amount of work required to be done, we can use template inheritance.
+-> We create a templates folder in the root directory and create a base.html or layout.html (name is flexible) in it.
+-> We then add the basic structure to this file and specify a {% block <block_name> %} tag for any content which might change from webpage to webpage.
+-> The block_name is compulsary.
+-> This tag also requires a {% endblock %} closing tag.
+-> Anything present in between the opening and closing tags are the default content which will be displayed if no content is passed in from the templates inheriting from this base template.
+e.g)
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block page_title %}My Challenges{% endblock %}</title>
+  </head>
+  <body>
+    {% block content %}{% endblock %}
+  </body>
+</html>
+-> When we want to inherit this base file in other files, we just use the {% extends "<file_path>" %} tag at the top of the template where we are inheriting.
+-> This file_path is a relative path from the current file.
+-> We can either provide the relative path or mention the absolute path in the settings.py under the 'DIRS' list.
+e.g)
+{% extends "../../../templates/base.html" %}
+
+            (OR)
+
+e.g)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            # BASE_DIR / "challenges" / "templates"
+            BASE_DIR / "templates"
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+-> Now in this inherting file, we do not have no specify the basic skeleton but rather only have to specify the blocks in a similar way as before.
+e.g)
+{% extends "base.html" %}
+{% block page_title %} All Challenges {% endblock %}
+{% block content %}
+    <ul>
+    {% for month in months %}
+        <li><a href="{% url "month-challenge" month %}">{{ month|title }}</a></li>
+    {% endfor %}
+    </ul>
+{% endblock %}
+
+
+
+INCLUDING PARTIAL TEMPLATE SNIPPETS:
+-> Same as partials in EJS.
+-> In the created app's templates directory, inside the subdirectory with the same name as the app, create a folder called partials.
+-> This folder houses parts of the code which are to be re-used in multiple files.
+-> To now include these reusable pieces of code, we use the {% include <file_path> %} tag.
+-> The file_path is a relative path from the cwd.
+-> The file_path can also be a path from the 'templates' directory of the specified app as long as the app is recognisable by django.
+-> We have access to the variables sent to templates which include partial files from the partial files themselves.  
+e.g)
+{% block content %}
+    <!-- {% include "challenges/partials/header.html" %} -->
+    {% include "./partials/header.html" %}
+    <h1>{{ month|title }}'s Challenge</h1>
+    {% if text %}
+	<h2>{{text}}</h2>
+    {% else %}
+	<h2>No Challenge has been set for this month</h2>
+    {% endif %} 
+{% endblock %}
+
+-> We can also pass in specific values depending on which webpage we're on using the "with" keyword.
+-> These specific values can be used in the partial files and vary according to the value passed while including them.
+e.g)
+{% include "./partials/header.html" with active_page="challenge" %}
+-> We can now use this 'active_page' variable in the partials file however we want.
+
+
+
+NOTES: 
+-> We cannot access dictionary items in the DTL using {{ dictionary['key'] }}, we'll have to access it using {{ dictionary.key }} instead.
+-> We also cannot call functions as we do in python {{ function_name() }}, we'll have to do {{ function_name }} instead.
+
+
+
+404 TEMPLATES:
+-> We usually create a 404 template in the templates directory present in the root directory of the project.
+-> We cannot use the render function directly as it always returns a success response.
+-> Therefore we use the HttpResponseNotFound function instead, along with the render_to_string function to return a 404 template.
+e.g)
+def monthly_challenge(request, month):
+    try:
+        challengeText = monthly_challenges[month]
+        """Directly rendering the html documents using the render function"""
+        return render(request, "challenges/challenge.html",{
+            "text": challengeText,
+            "month": month
+        })
+    except:
+        response_data = render_to_string("404.html")
+        return HttpResponseNotFound(response_data)
+
+-> Another method we can use is the inbuilt Http404 function.
+-> This function raises a 404 error and searches for a file named '404.html' to display.
+-> However, this will not work in developement as DEBUG must be set to False in the settings.py file which we usually do while deploying.
+-> But if we set this to False during developement, the server stops working.
+e.g)
+def monthly_challenge(request, month):
+    try:
+        challengeText = monthly_challenges[month]
+        """Directly rendering the html documents using the render function"""
+        return render(request, "challenges/challenge.html",{
+            "text": challengeText,
+            "month": month
+        })
+    except:
+        raise Http404()
+
+
+
+ADDING STATIC FILES:
+-> To add static files for a specific app, we create a 'static' folder right next to the templates directory which can contain our javascript logic and css styling.
+-> Inside this 'static' folder, we add another folder which has the same name as the app it's being created in.
+-> Now to make sure the changes work, check settings.py to see if 'django.contrib.staticfiles' is present in the INSTALLED_APPS list.
+e.g)
+INSTALLED_APPS = [
+    'challenges',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+]
+
+-> To load the built in plugins to use static files in our templates, we use the {% load static %} tag.
+-> We need to use the <link rel="stylesheet" href=""> tag in our template to specify which static file we want to use  (specify path in href).
+-> We use thd block tag in the base template so that the static files can vary from template to template.
+e.g)
+{% extends "base.html" %}
+
+{% block page_title %} All Challenges {% endblock %}
+
+{% block links %} <link rel="stylesheet" href="{% static "challenges/challenges.css" %}"> {% endblock %}
+
+{% block content %}
+  <ul>
+    {% for month in months %}
+      <li><a href="{% url "month-challenge" month %}">{{ month|title }}</a></li>
+    {% endfor %}
+  </ul>
+{% endblock %}
+
+-> Over here we use the {% static "<path>" %} tag to build us a path to the required static file.
+-> This static tag can only be used after loading it using the {% load static %} tag.
+-> If the applied changes(css styles / js logic) do not show up at first, just restart the developement server.
+
+
+
+ADDING GLOBAL STATIC FILES:
+-> To do this, create a 'static' folder in the root directory.
+-> Now add your styles here.
+-> This can be used throughout the entire project.
+-> We use the <link rel="stylesheet" href=""> tag directly in the base template instead of using block tags since we want to make the static files global.
+e.g)
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block page_title %}My Challenges{% endblock %}</title>
+    <link rel="stylesheet" href="{% static "styles.css" %}" /> {% block links %}
+    {% endblock %}
+  </head>
+  <body>
+    {% block content %}{% endblock %}
+  </body>
+</html>
+
+-> However, the problem with this is that django only looks for static files in the apps and not on the global level.
+-> To make this gloabal level 'static' directory visible to django, we add a 'STATICFILES_DIRS' list to the settings.py file.
+-> This adds directories which django should while checking for static files.
+
+
+
+BUILDING STATIC URLs WITH VARIABLES:
+-> To build static URLs with variables, i.e, part of the path is represented as a variable in templates.
+-> We cannot do this how we normally do in python, i.e, using the '+' operator.
+-> Instead, we must use the add filter.
+e.g)
+{% static "my_path/to/"|add:the_file %}
+
+
+
+

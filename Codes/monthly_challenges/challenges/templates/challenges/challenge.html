@@ -1,0 +1,22 @@
+{% extends "base.html" %} 
+{% load static %}
+
+{% block page_title %} 
+	{{ month|title }}'s Challenge
+{% endblock %} 
+
+{% block links%}
+    <link rel="stylesheet" href="{% static "styles.css" %}">
+    <link rel="stylesheet" href="{% static "challenges/partials/header.css" %}">
+{% endblock %}
+
+{% block content %}
+    <!-- {% include "challenges/partials/header.html" %} -->
+    {% include "./partials/header.html" with active_page="challenge" %}
+    <h1 class="white-color">{{ month|title }}'s Challenge</h1>
+    {% if text %}
+	<h2 class="white-color">{{text}}</h2>
+    {% else %}
+	<h2 class="white-color">No Challenge has been set for this month</h2>
+    {% endif %} 
+{% endblock %}
