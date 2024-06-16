@@ -67,9 +67,9 @@ pip install virtualenv
 e.g)
 python -m venv <virtualenv_name>
 
--> To activate the virtual environment, just do:
+-> To activate the virtual environment, just do: (on bash terminal)
 e.g)
-<virtualenv_name>\Scripts\activate
+source <virtualenv_name>\Scripts\activate 
 
 -> Install all necessary packages after activating the virtual environment.
 e.g)
