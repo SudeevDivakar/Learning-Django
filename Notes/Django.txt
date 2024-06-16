@@ -80,6 +80,14 @@ django-admin startproject <project_name> .          (This dot creates the django
 e.g)
 deactivate
 
+-> To create a requirements.txt file, just run:
+e.g)
+pip freeze > requirements.txt
+
+-> To install these requirements, we do:
+e.g)
+pip install -r requirements.txt
+
 
 
 GITIGNORE FILE FOR DJANGO:
