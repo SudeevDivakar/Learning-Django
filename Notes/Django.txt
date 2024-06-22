@@ -655,4 +655,38 @@ e.g)
 
 
 
+SLUGS:
+-> Slugs are basically unique identifiers to uniquely identify different items of a website.
+-> Django comes with a slug checker which checks if the slug has only character, numbers and '-'. Any other special characters would result in an error.
+e.g)
+urlpatterns = [
+    path("", views.index),
+    path("posts", views.posts),
+    path("posts/<slug:slug>", views.specific_post)
+]
 
+
+
+ADDING IMAGES AS STATIC FILES:
+-> Same as working with other static files.
+-> Create a seperate subdirectory in the 'static' dircetory called images, and add all images needed in that app into that images folder.
+-> We build a path to the needed resource the same way we would for other static files, i.e, using the static tag.
+
+
+
+THE LINEBREAKS FILTER:
+-> If we want to output string content exactly as it is (with linebreaks) using interpolation, we use the linebreaks filter.
+-> This outputs the content along with the appropriate linebreaks.
+e.g)
+<main>
+    {{project.content|linebreaks}}
+</main>
+
+
+
+THE DATE FILTER:
+-> This can be used to output date date in a specific format.
+e.g)
+<div>
+    Last Updated on <time>{{project.date|date:"d M Y"}}</time>
+</div>
