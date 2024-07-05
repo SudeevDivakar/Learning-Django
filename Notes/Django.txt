@@ -690,3 +690,455 @@ e.g)
 <div>
     Last Updated on <time>{{project.date|date:"d M Y"}}</time>
 </div>
+
+
+
+SQL DATABASES:
+-> Store data in tables
+-> Have same schema which every row must follow.
+-> MySQL, PostgreSQL, SQLite
+
+
+NoSQL Databases:
+-> Store data in documents (looks like dictionaries)
+-> No clear schema
+-> MongoDB, Cassandra
+
+
+
+NOTE: We do not have to write SQL queries to interact with the database as while using django, we use data models to interact with the database.
+
+
+
+WORKING WITH DJANGO MODELS:
+-> We define our data entities in the models.py file of the specific app.
+-> These entities are basically blueprints for the data objects that we will work with.
+-> To start out, we create a class which extends the 'models.Model' class.
+-> In this class we shall define the structure of a database entity.
+-> The table being created will be plural of the class name.
+-> We define the type of data each field can accept.
+-> Refer here for more information:
+e.g)
+https://docs.djangoproject.com/en/5.0/ref/models/fields/
+
+-> We use the models.CharField() type to specify that we want to store strings which are small to medium size.
+-> We need to add one argument to the constructor, i.e., the max_length argument.
+e.g)
+from django.db import models
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+
+-> We use the models.IntergerField() type to store values which are strictly integers without decimal points.
+e.g)
+from django.db import models
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+
+-> An id column which has an auto-incrementing number is automatically created whenever data is added.
+-> If we want to set it ourselves, we can using the 'id = models.AutoField()', but we don't need to.
+-> This is needed as an unique identifier.
+
+
+
+MIGRATIONS:
+-> We need to make django aware of the newly created class so that it can create a table and perform data operations on it.
+-> We make it aware by registering the app in the settings.py file.
+-> We do this in two steps.
+-> The first step is similar to how we made django aware of apps for templates.
+e.g)
+INSTALLED_APPS = [
+    'book_outlet',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+]
+
+-> Now we need to tell django that it should reach out to the db.sqlite3 file and create the necessary tables.
+-> We do this by using migrations.
+-> The migrations feature basically defines steps for django to execute. These steps help to touch the database and manipulate it.
+-> Therefore when we add/update models in the 'models.py' file, we need to make sure we create migrations for django to execute (instructions on how to update database)
+
+-> To create migrations, we first navigate into the overall project folder and run:
+e.g)
+python manage.py makemigrations
+
+-> This populates the migrations folder of all the apps where migrations are needed.
+-> Now to execute the migrations files which have not been executed yet, we need to run:
+e.g)
+python manage.py migrate
+
+
+
+OPENING A TERMINAL TO INTERACT WITH THE DATABASE:
+-> To open an interactive python interpreter/terminal, do: 
+e.g)
+python manage.py shell
+
+
+
+INSERTING DATA:
+-> We use the specific class(of the table) we created to add data into the database.
+-> Each entry into the table will be an instantiation of the class.
+-> We must instantiate these entries using keyword arguments.
+e.g)
+>> from book_outlet.models import Book
+>> harry_potter = Book(title="Harry Potter 1", rating = 5)
+
+-> However, this does not do anything with the database yet.
+-> To insert this entry into the database, we use the .save() method.
+e.g)
+>> harry_potter.save()
+
+
+
+GETTING ALL ENTRIES:
+-> To get all entries in a table, we use the .objects.all() method.
+e.g)
+>> Book.objects.all()
+-> However, the entries normally returned by this are all cryptic.
+
+
+
+MIN AND MAX VALUE VALIDATORS:
+-> To add min and max value validators, we need to import MinValueValidator and MaxValueValidator from django.core.validators
+e.g)
+from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+
+
+
+UPDATING MODELS AND MIGRATIONS:
+-> We can add methods in our blueprint class which we define in the models.py file. (for data specific business logic)
+-> We can also add utility methods and override built in existing methods.
+
+-> One useful built in utility method which we can override is the __str__ method.
+-> This method exists in every class in python (not django or model specific).
+-> When we override this class, we can specify how instances of this class should be outputted in the terminal
+e.g)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+    def __str__(self):
+        return f"{self.title} ({self.rating})"
+
+-> Everytime we update a model schema, we also need to correspondingly update the database.
+-> To do this, we just simply run:
+e.g)
+python manage.py makemigrations
+-> If we do not provide a default value for the new fields, we will recieve a prompt asking how we want to fill these fields.
+-> To prevent this, in the new field which we are creating, we add a parameter 'null=True' or we can also provide 'default=<value>'.
+-> We can also add the parameter 'blank=True' which basically says that the value can be empty (different from null).
+-> Now if we run the makemigrations command, we won't recieve a prompt.
+-> After running the command, a new migrations file is created. Django creates new files so that we can rollback migrations if needed.
+-> Now we run the command
+e.g)
+python manage.py migrate
+
+-> To access any particular field of a class instance in the database from the terminal, we can simply use the dot notation
+e.g)
+>> Book.objects.all()[1].is_bestselling
+False
+
+
+
+BLANK vs NULL:
+-> The blank type specifies that a value is not needed while getting information from a form.
+-> The null type specifies the value (null) that must added into a database in case a field is not provided.
+
+
+
+UPDATING DATA:
+-> One way to access each individual item(model class instantiation), is
+e.g)
+>> harry_potter = Book.objects.all()[0] 
+-> Of course this is not completely optimal.
+
+-> To update this value, we just need to do
+e.g)
+>> harry_potter.author = "J.K. Rowling"
+>> harry_potter.is_bestselling = True
+-> However, this only updates the value in the python memory.
+
+-> To update this entry in the database, we just need to run
+e.g)
+>> harry_potter.save()
+
+
+
+DELETING DATA:
+-> We delete data by doing
+e.g)
+>> harry_potter = Book.objects.all()[0]
+>> harry_potter.delete()
+
+-> This returns us a tuple containing information on how many items were deleted and for which models the deletion were for.
+e.g)
+(1, {'book_outlet.Book': 1})
+
+
+
+USING CREATE INSTEAD OF SAVE:
+-> Instead of making a class instance for a model and then running the save() method on it to add that instance into the database, we can just use the create method
+-> This skips the step of having to save() the instance into the database by doing it automatically.
+-> This function also returns us the instance just created.
+e.g)
+>> Book.objects.create(title="My Story", author="Sudeev", rating = 5, is_bestselling = True)
+
+
+
+QUERYING & FILTERING DATA:
+-> To find certain instances of a model from a database, we can use the get() method.
+e.g)
+>> Book.objects.get(id=3)
+>> Book.objects.get(title="My Story")
+
+-> However, the get() method only gets one entry from the database.
+-> If we query something that has more than one entry, it will throw an error
+
+-> To get multiple entries from the database, we use the filter() method.
+e.g)
+>> Book.objects.filter(is_bestselling = True)
+
+-> However, if we try filter(rating<3), this will result in an error as it is invalid python syntax(cannot pass expression as an argument).
+-> TO overcome this, django provides us with field lookups which we append to field names to help filter out items based on other ways(inequality and startswith)
+e.g)
+>> Book.objects.filter(rating__lt=3)
+>> Book.objects.filter(rating__lte=3)
+>> Book.objects.filter(rating__gte=3)
+>> Book.objects.filter(rating__gt=3)
+-> To find items with a certain substring, we do
+e.g)
+>> Book.objects.filter(rating__lt=3, title_contains="Story")
+-> By default __contains is case sensitive. To perform non-case-sensitive filtering , we use __icontains. __contains by default does not perform case sensitive searching for SQLite though.
+
+-> To view more such field lookups, visit the following documentation
+e.g)
+https://docs.djangoproject.com/en/5.0/topics/db/queries/
+
+
+
+OR CONDITIONS:
+-> Till now, all filtering which we perform are 'and' conditions.
+e.g)
+>> Book.objects.filter(rating__lt=3, title_contains="Story")
+
+-> To perform 'or' conditions, we first need to import Q
+e.g)
+from django.db.models import Q
+
+-> We wrap each individual expressions within this Q() function and seperate it using the '|'.
+-> Anything seperated between the '|' will have the 'or' condition applied on them.
+e.g)
+>> Book.objects.filter(Q(rating__lt=3) | Q(is_bestselling=True))
+
+-> We can also perform 'and' conditions using the Q() function.
+-> We do this by seperating the expressions with a ','
+e.g)
+>> Book.objects.filter(Q(rating__lt=3) | Q(is_bestselling=True), Q(author = "J.K. Rowling"))
+-> We can also write the above query where the 'and' condition is not wrapped in the Q() function granted that the 'and' condition shows up at the end(after all 'or' conditions)
+e.g)
+>> Book.objects.filter(Q(rating__lt=3) | Q(is_bestselling=True), author = "J.K. Rowling")
+
+
+
+QUERY PERFORMANCE:
+-> When we run a query like, bestsellers = Book.objects.filter(is_bestselling=True), the database is not immediately accessed.
+-> The only thing stored in bestsellers is the query definition(query set), but not the result of the query.
+-> This is done to improve query performance. We can also chain on more filter calls without accessing the database directly.
+e.g)
+>> amazing_bestsellers = bestsellers.filter(rating__gt=4)
+-> Django will only access the database when we need to use the information stored in it.
+e.g)
+>> print(amazing_bestsellers)
+
+-> Django also caches the results until the values are changed in the database so that less database accesses have to be made.
+-> Chained filter calls refer to cached data to get the information it needs, thereby reducing the number of database accesses even more.
+NOTE: Not storing a value in a variable will not result in cached values.
+
+
+
+BULK OPERATIONS:
+-> To delete multiple model instances at once, we first filter out the query set we want to delete and run the delete() function on them.
+e.g)
+>> Book.objects.filter(rating=4).delete()
+-> When django deletes a model instance, it emulates the behaviour of the SQL constraint 'ON DELETE CASCADE'
+
+-> To update multiple model instances at once, we use the bulk_update(objs, fields, batch_size=None) function.
+-> The fields parameter is a list of all the fields which should be updated.
+e.g)
+>>> objs = [
+...    Entry.objects.create(headline='Entry 1'),
+...    Entry.objects.create(headline='Entry 2'),
+... ]
+>>> objs[0].headline = 'This is entry 1'
+>>> objs[1].headline = 'This is entry 2'
+>>> Entry.objects.bulk_update(objs, ['headline'])
+
+-> To create multiple model instances in bulk, we use the bulk_create() function.
+-> This method inserts a list of objects into the database in an efficient manner.
+e.g)
+>>> Entry.objects.bulk_create([
+...     Entry(headline='This is a test'),
+...     Entry(headline='This is only a test'),
+... ])
+
+
+
+NOTE: While querying with the get(id=<id>) method where the field is the id, we can also write this as .get(pk=<id>)
+
+
+
+QUERYING IN FILES:
+-> Done the same way as done in the shell
+e.g)
+def book_detail(request, id):
+    try:
+        book = Book.objects.get(pk=id)
+    except:
+        raise Http404()
+    return render(request, "book_outlet/book_detail.html", {
+        "title": book.title,
+        "author": book.author,
+        "rating": book.rating,
+        "is_bestselling": book.is_bestselling
+    })
+
+-> In the above code, if we do not succeed in retrieving the items from the database(any error occurs), we raise a Http404 error which displays the 404.html template.
+-> There is a function for this whole functionality already however. 
+e.g)
+from django.shortcuts import render, get_object_or_404
+def book_detail(request, id):
+    book = get_object_or_404(Book, pk=id)
+    return render(request, "book_outlet/book_detail.html", {
+        "title": book.title,
+        "author": book.author,
+        "rating": book.rating,
+        "is_bestselling": book.is_bestselling
+    })
+
+-> The above code also has the same functionality.
+
+
+
+BUILDING DYNAMIC URLS USING MODELS:
+-> We can build dynamic urls using the {% url %} tag in DTL.
+-> However, another way to do this is to override the 'get_absolute_url(self)' function in the specific model's class.
+e.g)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    author = models.CharField(null=True, max_length=100)
+    is_bestselling = models.BooleanField(default=False)
+    def get_absolute_url(self):
+        return reverse("book-details-page", args=[self.id])   
+    def __str__(self):
+        return f"{self.title} ({self.rating})"
+
+e.g)
+{% extends "book_outlet/base.html" %} {% block title %} All Books {% endblock %}
+{% block content %}
+<ul>
+  {% for book in books %}
+  {% comment %} <li><a href="{% url "book-details-page" book.id %}">{{ book.title }}</a> (Rating: {{ book.rating }})</li> {% endcomment %}
+  <li><a href="{{ book.get_absolute_url }}">{{ book.title }}</a> (Rating: {{ book.rating }})</li>
+  {% endfor %}
+</ul>
+{% endblock %}
+
+
+
+MAKING CUSTOM SLUGS:
+-> We have used the default 'id' fields as unique identifiers in our routes so far.
+-> If we wish to add unique slug values as the identifiers, we can do so by the following steps
+-> The first step is to create a slug field in the model class with the field type as models.SlugField()
+e.g)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    author = models.CharField(null=True, max_length=100)
+    is_bestselling = models.BooleanField(default=False)
+    slug = models.SlugField(default="", null=False)
+
+-> Now to make sure that every slug does not have a value of "", we must override the built in save model class method.
+-> At the end of this overridden save method, we must also call the default inbuilt save method. 
+-> What we are doing right now, is just adding additional code which will be run when the save method is called. We do not want to get rid of the original save function.
+e.g)
+def save(self):
+    .......
+    super().save(*args, **kwargs)
+
+-> We then import slugify from django.utils.text
+-> This function helps us convert a certain string/text into a slug automatically.
+e.g)
+from django.utils.text import slugify
+class Book(models.Model):
+    slug = models.SlugField(default="", null=False)
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
+-> If the data field is just newly added, the old entries' new field values must be populated.
+-> In the above mentioned case, we can do this by just saving each item back into the database.
+e.g)
+>> Book.objects.get(title="Despicable Me").save()
+
+
+
+IMPROVING PERFORMANCE BY ADDING DATABASE INDEXES:
+-> If we have a field which we use very often (e.g. the slug field which is used everytime we view a specific book or database item), we can set it as a database index to increase performance.
+-> We can do this by adding the parameter db_index=True for the field in the model class.
+-> This makes searches for the specific field more efficient.
+-> We should only set a few fields as indexes as setting all/many fields can lead to a decrease in performance.
+e.g)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    author = models.CharField(null=True, max_length=100)
+    is_bestselling = models.BooleanField(default=False)
+    slug = models.SlugField(default="", null=False, db_index=True)
+
+
+AGGREGATION AND ORDERING:
+-> Helps us get the count, average, max, min, etc. of a provided query set.
+-> To find the count of all items in a query set, we use the .count() function
+e.g)
+def index(request):
+    books = Book.objects.all()
+    num_books = books.count()
+-> num_books now holds the number of books in the 'books' query set.
+
+-> To find the average, min, max, etc. we use the .aggregate() function along with a method imported from django.db.models
+-> We use the Avg, Min, Max, etc. functions inside the .aggregate() function.
+-> The parameter to the Avg, Min, Max, etc. functions is the field to which we want to apply the specific aggregation on.
+e.g)
+from django.db.models import Avg, Max, Min
+def index(request):
+    books = Book.objects.all()
+    num_books = books.count()
+    avg_rating = books.aggregate(Avg("rating"))
+
+
+
+ORDERING DATA:
+-> We use the .order_by() function on a query set to sort the query set in order of a specified field.
+-> We can also order by multiple fields if we want to.
+e.g)
+def index(request):
+    books = Book.objects.all().order_by("title")
+
+-> If we want to sort a query set in descending order of a specified field, we just add a '-' before the field we want to order.
+e.g)
+def index(request):
+    books = Book.objects.all().order_by("-title")
+
+-> If we want to sort the fields in order of more than one field, we can specify the multiple fields seperated by ',' to the .order_by() function.
+e.g)
+def index(request):
+    books = Book.objects.all().order_by("rating", "-title")
