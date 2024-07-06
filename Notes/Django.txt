@@ -1142,3 +1142,100 @@ def index(request):
 e.g)
 def index(request):
     books = Book.objects.all().order_by("rating", "-title")
+
+
+
+DJANGO ADMIN FEATURE:
+-> Django has a built in administration user interface which we can use to administer our data.
+-> Meant to be used by the developer adding items onto the database. Not to be used for users placing orders, etc.
+-> To access this user interface, we just visit "http://localhost:800/admin/"
+-> To login, we need to create a superuser. We do this by doing
+e.g)
+python manage.py createsuperuser
+-> After entering the necessary details, we should be able to login.
+
+
+
+ADDING MODELS TO ADMIN AREA:
+-> Not all of our models have to be managed by django admin.
+-> User generated data is usually not managed by django admin.
+-> Therefore we need to make django admin aware of which data it should manage.
+-> To do this we use the admin.py file as shown below
+e.g)
+from django.contrib import admin
+from .models import Book
+# Register your models here
+admin.site.register(Book)
+
+-> This makes the Book model visible in django admin.
+
+
+
+CONFIGURING MODEL FIELDS:
+-> In django admin, if we automatically set the value for a field on save(or anything else) in the model class, we must provide an option to create an item without the corresponding field being required.
+-> To do this, we set 'blank=True' in the model class field.
+-> Doing this makes sure that the same field in django admin will not be required before creating an instance of that model class.
+
+-> Another way to do this would be to set 'editable=False'
+-> This would make it so that the field will not show up in django admin
+e.g)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    author = models.CharField(null=True, max_length=100)
+    is_bestselling = models.BooleanField(default=False)
+    slug = models.SlugField(default="", blank=True, editable=False, null=False, db_index=True)   
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
+
+
+CONFIGURING MODEL FIELDS IN MORE DETAIL:
+-> To configure model fields in more detail, we can create a class in the admin.py file.
+-> The name of this class is usually '<ModelName>Admin' and it extends 'admin.ModelAdmin'
+-> To make django admin aware of this class, we give this class as a second parameter to 'admin.site.register'
+
+-> If we want to configure any of the fields as read only, we set a tuple called 'readonly_fields' with all the fields which we wish to set as read only.
+e.g)
+class BookAdmin(admin.ModelAdmin):
+    readonly_fields = ("slug",)
+
+-> If we already want to display a value for a field beforehand, we set a dictionary called 'prepopulated_fields' where the keys are the fields which we want to prepopulate and the values are tuples of fields from which we are prepopulating.
+-> A field cannot be set to both readonly_fields and prepopulated_fields at the same time.
+e.g)
+class BookAdmin(admin.ModelAdmin):
+    # readonly_fields = ("slug",)
+    prepopulated_fields = {"slug": ("title","rating")}
+-> In the above code, title, rating and slug are all of different types but django auto converts title and rating to slug type using slugify under the hood.
+
+-> The django admin form has built in validations to make sure the data being entered is of the right type.
+
+
+
+SETTING FILTERS:
+-> We can filter all items when they are being displayed by certain fields.
+-> To do this all we need to do is add a 'list_filter' property to the class in the admin.py file.
+-> This 'list_filter' property is a tuple containing the fields by which we want to filter.
+e.g)
+class BookAdmin(admin.ModelAdmin):
+    prepopulated_fields = {"slug": ("title","rating")}
+    list_filter = ("rating", "author")
+
+
+
+DISPLAYING ONLY CERTAIN MODEL FIELDS:
+-> To display only certain model fields in the django admin area, we use the 'list_display' property.
+-> The 'list_display' property is a tuple containing the model fields which we want to display on the django admin area.
+e.g)
+class BookAdmin(admin.ModelAdmin):
+    prepopulated_fields = {"slug": ("title","rating")}
+    list_filter = ("rating", "author")
+    list_display = ("title", "author")
+
+
+
+MORE CONFIG OPTIONS:
+-> For more information on configuring model fields, visit the below link
+e.g)
+https://docs.djangoproject.com/en/5.0/ref/contrib/admin/
