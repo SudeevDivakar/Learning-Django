@@ -735,6 +735,24 @@ class Book(models.Model):
     title = models.CharField(max_length=50)
     rating = models.IntegerField()
 
+-> We use the models.TextField() type to specify that we want to store strings which are large sized.
+-> A max_length parameter is not compulsary while using this.
+e.g)
+from django.db import models
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+    content = models.TextField()
+
+-> We use the models.EmailField() type to specify that we want to store a string which must be of an email format.
+e.g)
+from django.db import models
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+    content = models.TextField()
+    email_address = models.EmailField()
+
 -> An id column which has an auto-incrementing number is automatically created whenever data is added.
 -> If we want to set it ourselves, we can using the 'id = models.AutoField()', but we don't need to.
 -> This is needed as an unique identifier.
@@ -811,6 +829,18 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class Book(models.Model):
     title = models.CharField(max_length=50)
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+
+
+
+MIN AND MAX LENGTH VALIDATORS:
+-> We can also work with min and max length validators for string data.
+e.g)
+from django.db import models
+from django.core.validators import MinLengthValidator, MaxLengthValidator
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+    content = models.TextField(validators=[MinLengthValidator(10), MaxLengthValidator(1000)])
 
 
 
@@ -1088,6 +1118,16 @@ class Book(models.Model):
 -> In the above mentioned case, we can do this by just saving each item back into the database.
 e.g)
 >> Book.objects.get(title="Despicable Me").save()
+
+-> Additionally if we want to make a slug or any field unique, we can set an extra parameter 'unique=True'.
+e.g)
+class Post(models.Model):
+    title = models.CharField(max_length=150)
+    excerpt = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True, db_index=True)
+
+-> We do not need to set the 'db_index' parameter as True because for a SlugField, the db_index parameter is True by default.
+-> We do not need the 'db_index' parameter also because we have already set 'unique=True'. Setting 'unique=True', automatically creates an index.
 
 
 
@@ -1423,3 +1463,16 @@ e.g)
 class Review(models.Model):
   # ... other fields ...
   product = models.ForeignKey('store.Product') # '<appname>.<modelname>'
+
+
+
+DJANGO PERFORMANCE NOTE:
+-> When we write a python query like this
+e.g)
+latest_posts = Post.objects.all().order_by("-date")[:3]
+-> Django does not retrieve all posts from the database and take the first 3 posts from it.
+-> Django is smart enough to construct the SQL query in such a way that it only retrieves the 3 needed posts from the database. 
+NOTE: Django does not allow negative indexing in the above example code.
+
+
+
