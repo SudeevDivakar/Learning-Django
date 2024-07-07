@@ -973,18 +973,18 @@ e.g)
 -> To update multiple model instances at once, we use the bulk_update(objs, fields, batch_size=None) function.
 -> The fields parameter is a list of all the fields which should be updated.
 e.g)
->>> objs = [
+>> objs = [
 ...    Entry.objects.create(headline='Entry 1'),
 ...    Entry.objects.create(headline='Entry 2'),
 ... ]
->>> objs[0].headline = 'This is entry 1'
->>> objs[1].headline = 'This is entry 2'
->>> Entry.objects.bulk_update(objs, ['headline'])
+>> objs[0].headline = 'This is entry 1'
+>> objs[1].headline = 'This is entry 2'
+>> Entry.objects.bulk_update(objs, ['headline'])
 
 -> To create multiple model instances in bulk, we use the bulk_create() function.
 -> This method inserts a list of objects into the database in an efficient manner.
 e.g)
->>> Entry.objects.bulk_create([
+>> Entry.objects.bulk_create([
 ...     Entry(headline='This is a test'),
 ...     Entry(headline='This is only a test'),
 ... ])
@@ -1239,3 +1239,187 @@ MORE CONFIG OPTIONS:
 -> For more information on configuring model fields, visit the below link
 e.g)
 https://docs.djangoproject.com/en/5.0/ref/contrib/admin/
+
+
+
+UNDERSTANDING RELATIONSHIP TYPES:
+-> Data is often connected.
+-> The ways in which data can be connected differs from model to model.
+-> One-to-many, one-to-one, many-to-many relationships are a few examples.
+
+
+
+CONNECTING TWO MODELS (ONE-TO-MANY):
+-> To connect two models, we make use of 'models.ForeignKey(<ModelName>)'
+-> This creates a pointer from one table entry to another table entry in the database.
+e.g)
+class Author(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+class Book(models.Model):
+    author = models.ForeignKey(Author)
+
+-> To set an on-delete cascade, we simply add
+e.g)
+class Book(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+
+-> To set all values to null after deletion, we simply add
+e.g)
+class Book(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.SET_NULL)
+
+-> To prevent the deletion of the referenced object if there are any objects referring to it, we simply add
+e.g)
+class Book(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.PROTECT)
+
+-> We need to run makemigrations and migrate anytime we make changes to the models.py file.
+-> Set null=True on the newly added fields so that makemigrations does not result in a warning/error.
+-> However since the author value previously had string values which does not match the newly set foreign key, we need to cleanse the database where data insertion causes error.
+-> Now we have successfully updated schema changes to the database.
+
+
+
+ADDING DATA FOR MODELS WITH RELATIONSHIPS:
+-> When creating a model instance with a foreign key, we need to provide the query instance of the referred instance in the foreign key field.
+-> We can get this query instance by either using the .get() method if the instance is already created or the .create() method if the query instance is not already created.
+e.g)
+>> jkrowling = Author(first_name="J.K.", last_name="Rowling")     
+>> jkrowling.save()
+>> hp1 = Book(title="Harry Potter 1", rating=5, is_bestselling=True, author=jkrowling)
+
+
+
+CROSS MODEL QUERIES:
+-> To access the sub-fields of a foreign key, we use '__'
+e.g)
+>> books_by_rowling = Book.objects.filter(author__last_name="Rowling")
+>> books_by_rowling = Book.objects.filter(author__last_name__contains="wling")
+
+-> To do the inverse of this, i.e. access the referer query set from the referred model, we first get the referred item from the database.
+-> We then use '.<referer_model_name_in_lower_case>_set' property (equivalent to '.objects')
+-> Now, if we chain .all() on the above query, we get the reverse query set.
+e.g)
+>> jkrowling = Author.objects.get(first_name = "J.K.") 
+>> jkrowling.book_set.all()
+<QuerySet [<Book: Harry Potter 1 (5)>]>
+
+-> In the above example, if we do not want to use the name book_set and we want to use a custom name, we can do this by setting a 'related_name' parameter in the foreign key.
+e.g)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, null=True, related_name="books")
+-> Now we can reverse query by
+e.g)
+>> jkrowling = Author.objects.get(first_name = "J.K.") 
+>> jkrowling.books.all()
+<QuerySet [<Book: Harry Potter 1 (5)>]>
+
+
+
+ADDING A ONE-TO-ONE RELATIONSHIP:
+-> Setting up a one-to-one relationship is the same as setting up a one-to-many relationship except that instead of 'models.ForeignKey()', we use 'models.OneToOneField()'.
+e.g)
+class Address(models.Model):
+    street = models.CharField(max_length=80)
+    postal_code = models.CharField(max_length=5)
+    city = models.CharField(max_length=50)
+class Author(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    address = models.OneToOneField(Address, on_delete=models.CASCADE)
+
+-> For one-to-one relationships, we do not need to set the 'related_name' parameter to anything as it can be accessed by the referred model by just '<referer_model_name_in_lower_case>'.
+-> Run makemigrations and migrate and set the null=True wherever required.
+
+
+
+REPRESENTING THE MODEL NAME CORRECTLY IN ADMIN AREA:
+-> Certain model names can be represented incorrectly in the admin area. For example, 'Address' will be represented as 'Addresss'.
+-> To configure this the way we want to, we need to add a Meta subclass to our model class in the models.py file.
+-> We now have to override the 'verbose_name_plural' property to change how the model will be represented in the admin area.
+-> We can also change how the singular form of the model will be represented using the 'verbose_name' property.
+e.g)
+class Address(models.Model):
+    street = models.CharField(max_length=80)
+    postal_code = models.CharField(max_length=5)
+    city = models.CharField(max_length=50)
+    def __str__(self):
+        return f"{self.street}, {self.city} - {self.postal_code}"  
+    class Meta:
+        # verbose_name = "Address"
+        verbose_name_plural = "Address Entries"
+
+
+
+NOTE: No two instances from the referrer model class can point to the same model instance of the referred class in a one-to-one relationship. Trying to do this will result in an error. 
+
+
+
+MANY-TO-MANY RELATIONSHIPS:
+-> Setting up a many-to-many relationship is the same as the other two relationship types except the only thing we change here is 'models.ManyToManyField()'
+-> For many-to-many relationships, we do not set the on_delete parameter.
+e.g)
+class Country(models.Model):
+    name = models.CharField(max_length=80)
+    code = models.CharField(max_length=2)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, null=True, related_name="books")
+    is_bestselling = models.BooleanField(default=False)
+    slug = models.SlugField(default="", blank=True, null=False, db_index=True)
+    published_countries = models.ManyToManyField(Country)
+
+-> Run makemigrations and migrate and set null=True if error shows up.
+
+
+
+QUERYING MANY-TO-MANY RELATIONSHIPS:
+-> Querying many to many relationships are almost completely the same except the only thing which we change is how we add instances in many-to-many fields.
+-> Instead of using '<Referer_model_name>.field = <Referred_model_instance>', we use the .add() method.
+-> We do this because in many-to-many relationships, the referer field is actually a list containing all the refered model instances.
+e.g)
+>> germany = Country.objects.create(name="Germany", code="DE")
+>> mys = Book.objects.all()[1]
+>> mys.published_countries.add(germany)
+>> mys.published_countries.filter(code="DE") 
+<QuerySet [<Country: Germany, DE>]>
+
+-> If we want to access the referer model set from the referred model, we can use 'book_set'.
+-> We can also add a 'related_name' parameter as seen before to use the 'related_name' value instead of 'book_set'.
+e.g)
+>> c1 = Country.objects.all()[0]
+>> c1.book_set.all()
+<QuerySet [<Book: Harry Potter 2 (5)>]>
+
+
+
+CIRCULAR AND LAZY RELATIONS:
+-> Sometimes, you might have two models that depend on each other - i.e. you end up with a circular relationship.
+-> Or you have a model that has a relation with itself.
+-> Or you have a model that should have a relation with some built-in model (i.e. built into Django) or a model defined in another application.
+-> Here is how to tackle all these issues
+
+-> For cases where we have multiple relationships between the same two models, we might need to define them in both models. By using the model name as a string instead of a direct reference, Django is able to resolve such dependencies.
+e.g)
+class Product(models.Model):
+  # ... other fields ...
+  last_buyer = models.ForeignKey('User')
+class User(models.Model):
+  # ... other fields ...
+  created_products = models.ManyToManyField('Product')
+
+-> For cases where a model has relations with itself, the special self keyword (used as a string value) tells Django that it should form a relationship with (other) instances of the same model.
+e.g)
+class User(models.Model):
+  # ... other fields ...
+  friends = models.ManyToManyField('self')
+
+-> For relationships with other apps and their models (built-in or custom apps), we can reference them by using the app name and then the name of the model inside the app.
+e.g)
+class Review(models.Model):
+  # ... other fields ...
+  product = models.ForeignKey('store.Product') # '<appname>.<modelname>'
