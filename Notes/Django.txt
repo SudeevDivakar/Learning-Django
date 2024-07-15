@@ -1896,7 +1896,217 @@ urlpatterns = [
 -> The 'as_view()' function is a built in function which lets django know that the class which we defined is a view.
 -> The 'as_view()' function also helps django find the get() and post() methods in the class.
 
--> We can also extend other type of views as well. For more information on these other views, check out the official documentation
+-> We can also extend (inherit from) other type of views as well. For more information on these other views, check out the official documentation
 e.g)
 https://docs.djangoproject.com/en/5.0/topics/class-based-views/generic-display/
 -> These different view extensions help us reduce the amount of code to be typed significantly.
+
+
+
+TEMPLATE VIEW:
+-> This is another type of class view which we could extend(inherit) from.
+-> The template view is used to create view classes which return templates.
+-> While using the 'TemplateView' we do not need to define a function to return a template. 
+-> We rather just have to set a property 'template_name' to the path of the template which we want to display.
+-> This will automatically render the template when a GET request is made.
+e.g)
+from django.views.generic.base import TemplateView
+class ThankYouView(TemplateView):
+    template_name = "reviews/thank_you.html"
+
+-> To output dynamic content using the 'TemplateView', we override a function called 'get_context_data'.
+-> We need to make sure that we always call 'super().get_context_data(**kwargs)'. We do not have to necessarily return it.
+-> The result of this call will contain the context(basically a dictionary) which we pass to the template.
+-> We can alter this context(dictionary) to add specific keys and values which we want and return it.
+e.g)
+class ThankYouView(TemplateView):
+    template_name = "reviews/thank_you.html"
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        context["message"] = "This works!"
+        return context
+
+
+
+ACCESSING DYNAMIC SEGMENTS OF AN URL USING TEMPLATE VIEW:
+-> If we have a dynamic segment in our URL and we want to access it, we can do that using the 'kwargs' parameter of the 'get_context_data' function which we override.
+e.g)
+class SingleReviewView(TemplateView):
+    template_name = "reviews/single_review.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        review_id = kwargs["id"]
+        selected_review = Review.objects.get(pk=review_id)
+        context["review"] = selected_review
+        return context
+-> In the above code, "id" should be replaced with the name of our dynamic segment mentioned in the 'urls.py' file.
+
+
+
+THE LIST VIEW:
+-> This is another type of class view which we could extend(inherit) from. 
+-> We use this class view whenever we want to display a list of data.
+-> This is pretty much an extension of the 'TemplateView' and helps with displaying a list of data from a specific model.
+
+-> We previously used to do this in the following way
+e.g)
+from .models import Review
+from django.views.generic import ListView
+class ReviewsListView(TemplateView):
+    template_name = "reviews/review_list.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        reviews = Review.objects.all()
+        context["reviews"] = reviews
+        return context
+
+-> This is how we can do it using the 'ListView' to reduce the amount of code which we need to write.
+e.g)
+class ReviewsListView(ListView):
+    template_name = "reviews/review_list.html"
+    model = Review
+-> By default, django fetches all the data from the model which we specify.
+
+-> The data fetched by 'ListView' can be accessed in the template by referring to 'object_list'
+e.g)
+<ul>
+    {% for review in object_list %}
+        <li>{{ review.user_name }} (Rating: {{ review.rating }})</li>
+    {% endfor %}
+</ul>
+
+-> If we want to customize the name of the data being passed into the template however, we can set the 'context_object_name' property to Whatever name we desire.
+e.g)
+class ReviewsListView(ListView):
+    template_name = "reviews/review_list.html"
+    model = Review
+    context_object_name = "reviews"
+
+-> We can override methods like 'get_ordering()' to change the order in which we get data, 'get_queryset()' to change how the data is fetched, etc.
+e.g)
+class ReviewsListView(ListView):
+    template_name = "reviews/review_list.html"
+    model = Review
+    context_object_name = "reviews"
+    def get_queryset(self):
+        base_query = super().get_queryset()
+        data = base_query.filter(rating__gt=4)
+        return data
+
+
+
+THE DETAIL VIEW:
+-> This is another type of class view which we could extend(inherit) from.
+-> Used for returning a template with a single piece of data, i.e. to display a single database instance.
+
+-> To use the 'DetailView', we first need to set the dynamic section of URL to 'pk' in the 'urls.py' file.
+e.g)
+urlpatterns = [
+    path("", views.ReviewView.as_view()),
+    path("thank-you", views.ThankYouView.as_view()),
+    path("reviews", views.ReviewsListView.as_view()),
+    path("reviews/<int:pk>", views.SingleReviewView.as_view())
+]
+-> This tells django that the value to be entered in the dynamic section of the URL should be treated as a primary key value.
+
+-> The class definition for the 'DetailView' is the same as for 'ListView'.
+e.g)
+from django.views.generic import DetailView
+class SingleReviewView(DetailView):
+    template_name = "reviews/single_review.html"
+    model = Review
+
+-> The dynamic data being passed to the template is usually the same name as the model but in all lowercase.
+-> We can also access the information passed to the template by using 'object'.
+e.g)
+<h1>{{ review.user_name }}</h1>      <!-- we can also use {{ object.user_name }} -->
+<p>Rating: {{ review.rating }}</p>     <!-- Name of the model being used here is Review -->
+<p>{{ review.review_text }}</p> 
+
+
+
+THE FORM VIEW:
+-> Class based views written to cater to forms usually have the same structure.
+-> This structure is basically a 'get' method to display the form and a 'post' method to handle form submissions.
+
+-> The way we handled this before was
+e.g)
+class ReviewView(View):
+    def get(self, request):
+        form = ReviewForm()
+        
+        return render(request, "reviews/review.html", {
+            "form": form
+        })
+    def post(self, request):
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect("/thank-you")      
+        return render(request, "reviews/review.html", {
+            "form": form
+        })
+
+-> While using the 'FormView' however, we set the 'form_class' property to the form which we want to link the view with.
+-> We then set the 'template_name' property as the path to the template which we want to display.
+-> Doing both of these takes care of our GET request functionality as well as form validating(displaying errors if the form data is wrong).
+e.g)
+from django.views.generic.edit import FormView
+class ReviewView(FormView):
+    form_class = ReviewForm
+    template_name = "reviews/review.html"
+
+-> Now, we need to add on is the 'success_url' property which tells django where to redirect to incase it was a valid form submission.
+e.g)
+class ReviewView(FormView):
+    form_class = ReviewForm
+    template_name = "reviews/review.html"
+    success_url = "/thank-you"
+
+-> We define what we want django to do in the case of a valid form submission by overriding the 'form_valid' method.
+-> This method only runs in the case of a valid form submission.
+-> All we need to do is add our form submission logic before the return statement(do not change the return statement here).
+e.g)
+class ReviewView(FormView):
+    form_class = ReviewForm
+    template_name = "reviews/review.html"
+    success_url = "/thank-you"
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+
+
+
+THE CREATE VIEW:
+-> The 'CreateView' reduces the code required for the 'FormView' even more.
+-> This view is used when we want the functioning of the 'FormView' but we want a view which automatically saves the form data to the database.
+
+-> We need to mention the model to which the 'CreateView' is referring to using the 'model' property.
+e.g)
+class ReviewView(CreateView):
+    model = Review
+
+-> We do not even need to create a form class in the 'forms.py' file while using this view.
+e.g)
+class ReviewView(CreateView):
+    model = Review
+    fields = "__all__"
+-> However, creating a form like this does not give us as much flexibility as given by the form classes made in the 'forms.py' file.
+
+-> We can also use form classes provided in the 'forms.py' file as usual but it must be a ModelForm.
+e.g)
+class ReviewView(CreateView):
+    model = Review
+    form_class = ReviewForm
+
+-> We now set the 'template_name' and 'success_url' properties to finish off the functionalities for handling GET requests(with rendering templates), form validations, handling POST requests(with redirection) and saving the form data in the database.
+e.g)
+class ReviewView(CreateView):
+    model = Review
+    form_class = ReviewForm
+    template_name = "reviews/review.html"
+    success_url = "/thank-you"
+
+
+
+NOTE: We also have 'UpdateView' and 'DeleteView'. Refer to the official documentation for more information.
