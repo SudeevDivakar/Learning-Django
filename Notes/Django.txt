@@ -2110,3 +2110,219 @@ class ReviewView(CreateView):
 
 
 NOTE: We also have 'UpdateView' and 'DeleteView'. Refer to the official documentation for more information.
+
+
+
+FILE UPLOADS:
+-> Happens through POST requests.
+-> The tag we use for file uploads is the <input /> tag with the type set to 'file'.
+e.g)
+<form action="/profiles/" method="POST">
+    {% csrf_token %}
+    <input type="file" />
+    <button>Upload!</button>
+</form>
+
+-> When we have a form with a file input type present in it, we need to add an 'enctype' attribute to it.
+-> This 'enctype' attribute should be set to "multipart/form-data"
+e.g)
+<form action="/profiles" method="POST" enctype="multipart/form-data">
+-> This tells the browser that this form, when submitted, will contain a file and this ultimately changes how the request is sent to the server.
+
+-> To access the uploaded files in the 'views.py' file, we use 'request.FILES'.
+-> This 'request.FILES' is a dictionary with the keys being the values of the name attributes of the HTML tags. 
+e.g)
+class CreateProfileView(View):
+    def get(self, request):
+        return render(request, "profiles/create_profile.html")
+    def post(self, request):
+        print(request.FILES["image"])     #This will print out the file name(but request.FILES["image"] is not just a file name, it's an object containing full data about the file)
+        return HttpResponseRedirect("/profiles")
+
+-> For more information on file uploads, read the official documentation
+e.g)
+https://docs.djangoproject.com/en/5.0/topics/http/file-uploads/
+
+
+
+STORING FILES LOCALLY(NAIVE WAY):
+-> We store files locally with normal python file handling.
+e.g)
+def store_file(file):
+    with open("temp/image.jpg", "wb+") as dest:
+        for chunk in file.chunks():
+            dest.write(chunk)
+class CreateProfileView(View):
+    def get(self, request):
+        return render(request, "profiles/create_profile.html")
+    def post(self, request):
+        store_file(request.FILES["image"])                  #This will print out the file name(but request.FILES["image"] is not just a file name, it's an object containing full data about the file)
+        return HttpResponseRedirect("/profiles")
+-> Here, we're accessing small chunks of the file progressively using the 'file.chunks()' function.
+-> We can access the entire file content at once and write it directly using 'read()' but in case the file is huge, a lot of memory will be occupied therefore reading it in chunks is more efficient.
+
+-> One more thing we should note is that the path specified "temp/image.jpg" is with respect to the overall project folder.
+-> So, if we expect the file to be stored, we must create a 'temp' directory first in the overall project folder.
+
+
+
+ADDING A FORM WITH A FILEFIELD:
+-> To make a file input field using a form class, we use 'forms.FileField()'.
+e.g)
+class ProfileForm(forms.Form):
+    user_image = forms.FileField()
+
+-> However, when we create a form class instance in the 'views.py' file, we need to provide both 'request.POST' and 'request.FILES' as parameters to check if the form is valid.
+-> This is because 'request.FILES' contains the information about the files which we need for basic validation.
+e.g)
+def store_file(file):
+    with open("temp/image.jpg", "wb+") as dest:
+        for chunk in file.chunks():
+            dest.write(chunk)
+class CreateProfileView(View):
+    def get(self, request):
+        form = ProfileForm()
+        return render(request, "profiles/create_profile.html", {
+            "form": form
+        })
+    def post(self, request):
+        submitted_form = ProfileForm(request.POST, request.FILES)
+        if submitted_form.is_valid():
+            store_file(request.FILES["image"])                  #This will print out the file name(but request.FILES["image"] is not just a file name, it's an object containing full data about the file)
+            return HttpResponseRedirect("/profiles")
+        return render(request, "profiles/create_profile.html", {
+            "form": submitted_form
+        })
+
+
+
+USING MODELS FOR FILE STORAGE:
+-> To create a model field for storing files, we use 'models.FileField()'.
+e.g)
+class UserProfile(models.Model):
+    image = models.FileField()
+
+-> This file field wants a file but this file will not be stored in the database.
+-> This is because it is a bad practice to store files in the database as it bloats the database and makes it slow.
+-> Files should instead be stored on hard drives.
+
+-> Therefore what 'models.FileField()' does is that it takes the file and stores it in our hard drive and only stores the path to that location in the database.
+-> To achieve this, we need to set a 'upload_to' parameter as the location where we will store these files.
+-> However, this 'upload_to' parameter by default points to the root directory of the operating system.
+-> To set this default root directory to inside the django project, we need to add a 'MEDIA_ROOT' string in the 'settings.py' file.
+-> This string is an absolute path to which files will be stored in subdirectories of this path.
+e.g)
+MEDIA_ROOT = BASE_DIR / "uploads"    # In the 'settings.py' file
+-> We create a directory called 'uploads' in the overall django project directory.
+
+e.g)
+class UserProfile(models.Model):
+    image = models.FileField(upload_to="images")
+-> All the files uploaded to this model, will be stored in a subdirectory called 'images' in the 'uploads' folder.
+
+-> Now, to save this file in the respective directory, we do
+e.g)
+class CreateProfileView(View):
+    def get(self, request):
+        form = ProfileForm()
+        return render(request, "profiles/create_profile.html", {
+            "form": form
+        })
+    def post(self, request):
+        submitted_form = ProfileForm(request.POST, request.FILES)
+        if submitted_form.is_valid():
+            profile = UserProfile(image=request.FILES["image"])
+            profile.save()
+            return HttpResponseRedirect("/profiles")
+        return render(request, "profiles/create_profile.html", {
+            "form": submitted_form
+        })
+
+-> Django also automatically assigns different names to files in case name clashes occur.
+
+
+
+USING AN IMAGE FIELD:
+-> In some cases, we might only be interested in storing images specifically instead of storing files in general.
+-> For these use cases, we can use 'models.ImageField(upload_to=<location>)' in the 'models.py' file.
+-> By doing this, django will only accept images and not other documents(pdf, docx, etc).
+e.g)
+class UserProfile(models.Model):
+    image = models.ImageField(upload_to="images")
+
+-> If this gives an error, just run the following on the terminal
+e.g)
+python -m pip install Pillow
+
+-> We can similarly set the type as 'forms.ImageField()' in the 'forms.py' file.
+e.g)
+class ProfileForm(forms.Form):
+    image = forms.ImageField()
+
+
+
+USING A CREATEVIEW FOR THE SAME FUNCTIONALITY:
+-> We can use a 'CreateView' with the 'models.ImageField()' to achieve the same functionality but with lesser code.
+e.g)
+class CreateProfileView(CreateView):
+    template_name = "profiles/create_profile.html"
+    model = UserProfile
+    success_url = "/profiles"
+    fields = "__all__"
+
+
+
+DISPLAYING UPLOADED FILES:
+-> For a model with the following fields
+e.g)
+class UserProfile(models.Model):
+    image = models.ImageField(upload_to="images")
+
+-> To display these uploaded files, we must first fetch all the data objects from the database and pass it onto the template (or use a class view)
+e.g)
+class ProfilesView(ListView):
+    model = UserProfile
+    template_name = "profiles/user_profiles.html"
+    context_object_name = "profiles"
+
+-> Now, in the template, we can refer to either the 'path' or 'url' property of the model image field.
+-> The path property gives us the file system path and is hence wrong for displaying the image through an <image /> tag.
+-> To display the image through an <image /> tag, we must therefore access the 'url' property of the model image field.
+e.g)
+{% for profile in profiles %}
+    <li>
+        <img src={{ profile.image.url }} />
+    </li>
+{% endfor %}
+
+-> This does not completely work however, as it fails to serve the uploaded files. We will look at why this happens and how to address this in the following notes section.
+
+
+
+SERVING UPLOADED FILES:
+-> The files which we try to display on the browser in the previous notes section are not displayed correctly.
+-> This happens because django by default, locks down all our folders and does not expose them to our browser for security reasons.
+-> The static files (css and javascript files) are exposed to the browser but these are exceptions to this.
+
+-> To fix this, we must do a couple of things.
+-> In the 'settings.py' file, we must add a 'MEDIA_URL' string which will be configured as "/<any_url_name>/".
+e.g)
+MEDIA_URL = "/user-media/"
+-> This url can be anything of our choice and it is part of the url which will be exposed to the outside world for accessing the uploaded files.
+-> This works similar to static files where the static files from many different apps are combined and added into one single 'static' folder.
+
+-> After this, we must open the global 'urls.py' file and add the following changes.
+e.g)
+from django.conf.urls.static import static
+from django.conf import settings
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('reviews.urls')),
+    path('profiles/', include('profiles.urls'))
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+-> The static function helps us serve static files (makes django aware of the folders which should be exposed to the outside world).
+-> The static function takes two arguments, the URL which should be used for exposing the files and the path on the file system which holds the actual files.
+-> The second argument is a named argument with the name 'document_root'.
+
+-> After all these steps are followed, the uploaded images should be served correctly.
