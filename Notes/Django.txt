@@ -2326,3 +2326,122 @@ urlpatterns = [
 -> The second argument is a named argument with the name 'document_root'.
 
 -> After all these steps are followed, the uploaded images should be served correctly.
+
+
+
+SESSIONS:
+-> These are basically just ongoing connections between a client(browser) and server.
+-> This means that it lives on even if the browser is closed in between or even if the computer is shut down.
+-> A session can be cleared, deleted and reset. Therefore, it is not forever but it is long living.
+-> The developer can decide how long the connection can live for.
+
+-> Data stored in a session persists as long as the session is active.
+-> An example of this can be the user authentication status.
+
+-> Without sessions, we would have to login everytime we reload the page or close the browser.
+
+-> The django application running on a server, stores the session data and an unique server identifier.
+-> Every user of the website has their own session.
+-> The session data and unique identifier are stored in session storage, usually a database or file.
+-> The client stores a cookie sent by the server, which contains the session identifier.
+-> The client sends this cookie with the session identifier to the server and the server looks up the session in the database and sends the session specific data back to the client or does whatever needs to be done with the session data.
+
+-> Django does a lot of the heavy lifting for us when it comes to sessions and all we need to do is configure how the session will behave.
+
+
+
+ENABLING AND CONFIGURING SESSIONS:
+-> We first need to make sure that 'django.contrib.sessions.middleware.SessionMiddleware', is a part of the MIDDLEWARE list in the 'settings.py' file.
+-> We also need to make sure that 'django.contrib.sessions', is a part of the INSTALLED_APPS list in the 'settings.py' file.
+-> Both of these should be present by default.
+
+-> We can also add a new setting at the bottom of the 'settings.py' file, called the 'SESSION_COOKIE_AGE'.
+-> This defines how long the session cookie will survive with 2 weeks being the default value. We must set this value in seconds.
+e.g)
+SESSION_COOKIE_AGE = 604800
+-> This would set the cookie age to 1 week.
+
+
+
+STORING DATA IN SESSIONS:
+-> To add data into the session storage, we access the 'request.session[<keyname>]' property.
+-> We can use this property to access session data or add data onto the session data storage.
+e.g)
+class AddFavouriteView(View):
+    def post(self, request):
+        review_id = request.POST["review_id"]
+        fav_review = Review.objects.get(pk=review_id)
+        request.session["favourite_review"] = fav_review
+        return HttpResponseRedirect("/reviews/" + review_id)
+
+-> Django adds this data to the database and makes sure this data will be available if requests are sent to the server by the particular user.
+
+-> However, doing this will lead us to encounter a "NOT SERIALIZABLE" error which we will look into in the next notes section.
+
+
+
+TYPE OF DATA THAT CAN BE STORED IN SESSION STORAGE:
+-> Django takes whatever we are storing and serializes it to a format called JSON.
+-> The problem with the above code is that we are trying to store a 'Review' object.
+-> This model instance object cannot be serialized into JSON as they might contain methods (methods cannot be converted into JSON).
+-> Hence we should not store objects in our sessions and should only store primitive values like strings, dictionaries, etc.
+-> Therefore, in the above code, it is better to just store the 'review_id' instead of the object since we can just use the review_id to fetch the object later on.
+e.g)
+class AddFavouriteView(View):
+    def post(self, request):
+        review_id = request.POST["review_id"]
+        request.session["favourite_review"] = review_id
+        return HttpResponseRedirect("/reviews/" + review_id)
+
+
+
+USING SESSION DATA:
+-> We access session data the same way as before, i.e. using 'request.session[<keyname>]'.
+e.g)
+class SingleReviewView(DetailView):
+    template_name = "reviews/single_review.html"
+    model = Review
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        loaded_review = self.object
+        request = self.request
+        favourite_id = request.session["favourite_review"]
+        context["is_favourite"] = favourite_id == loaded_review.id
+        return context
+-> 'self.object' in the above code gives us access to the loaded Review object.
+-> 'self.request' gives us access to the request.
+
+-> The above code still does not perfectly work and we need to tweak one single thing.
+-> We are originally storing the review_id in the session storage as a string. This is because we get the review_id from the input field and everything recieved from the input field is a string.
+-> Therefore when we compare the two ids here 'favourite_id == loaded_review.id', there is a type mismatch.
+-> We can fix this however using a simple type cast.
+e.g)
+class SingleReviewView(DetailView):
+    template_name = "reviews/single_review.html"
+    model = Review
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        loaded_review = self.object
+        request = self.request
+        favourite_id = request.session["favourite_review"]
+        context["is_favourite"] = favourite_id == str(loaded_review.id)
+        return context
+-> This above code works perfectly.
+
+
+
+SAFELY ACCESSING SESSION DATA:
+-> Trying to access any session data may fail if it was not set before.
+-> So, if we load the site without any session being set, we will run into an error.
+-> Therefore, a safer way to access session data would be to use 'request.session.get("<keyname>")'.
+e.g)
+class SingleReviewView(DetailView):
+    template_name = "reviews/single_review.html"
+    model = Review
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        loaded_review = self.object
+        request = self.request
+        favourite_id = request.session.get("favourite_review")
+        context["is_favourite"] = favourite_id == str(loaded_review.id)
+        return context
