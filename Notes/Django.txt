@@ -58,38 +58,6 @@ ANALYZING THE CREATED APP:
 
 
 
-VIRTUAL ENVIRONMENT SETUP:
--> To install virtualenv, do:
-e.g)
-pip install virtualenv
-
--> To set up a virtual environment, do:
-e.g)
-python -m venv <virtualenv_name>
-
--> To activate the virtual environment, just do: (on bash terminal)
-e.g)
-source <virtualenv_name>\Scripts\activate 
-
--> Install all necessary packages after activating the virtual environment.
-e.g)
-pip install django
-django-admin startproject <project_name> .          (This dot creates the django project in the same virtual environment folder)
-
--> To deactivate the virtual environment, just do:
-e.g)
-deactivate
-
--> To create a requirements.txt file, just run:
-e.g)
-pip freeze > requirements.txt
-
--> To install these requirements, we do:
-e.g)
-pip install -r requirements.txt
-
-
-
 GITIGNORE FILE FOR DJANGO:
 -> Add all requirements to a requirements.txt file.
 -> Add the name of the virtual environment to the .gitignore file
@@ -1993,6 +1961,18 @@ class ReviewsListView(ListView):
         data = base_query.filter(rating__gt=4)
         return data
 
+-> Setting a property 'ordering' in this class, would help us order the data in ascending or descending order of a specified field.
+e.g)
+class ReviewsListView(ListView):
+    template_name = "reviews/review_list.html"
+    model = Review
+    ordering = ["-rating"]           # Orders in decreasing order of rating
+    context_object_name = "reviews"
+    def get_queryset(self):
+        base_query = super().get_queryset()
+        data = base_query.filter(rating__gt=4)
+        return data
+
 
 
 THE DETAIL VIEW:
@@ -2008,6 +1988,14 @@ urlpatterns = [
     path("reviews/<int:pk>", views.SingleReviewView.as_view())
 ]
 -> This tells django that the value to be entered in the dynamic section of the URL should be treated as a primary key value.
+-> This also works with slugs.
+e.g)
+urlpatterns = [
+    path("", views.ReviewView.as_view()),
+    path("thank-you", views.ThankYouView.as_view()),
+    path("reviews", views.ReviewsListView.as_view()),
+    path("reviews/<slug:slug>", views.SingleReviewView.as_view())
+]
 
 -> The class definition for the 'DetailView' is the same as for 'ListView'.
 e.g)
@@ -2445,3 +2433,177 @@ class SingleReviewView(DetailView):
         favourite_id = request.session.get("favourite_review")
         context["is_favourite"] = favourite_id == str(loaded_review.id)
         return context
+
+
+
+CHOOSING BETWEEN THE DEFAULT AND EXTERNAL DATABASES:
+-> SQLite can tend to be slow for larger applications with a lot of incoming requests.
+-> Deleting the single SQLite file would result in permanent loss of data.
+-> These are two considerations we need to consider if we want to stick to the default SQLite database file or if we want to change to a database server.
+
+
+
+CHOOSING BETWEEN NOSQL AND SQL:
+-> SQL tends to be a better option here because Django's model system supports it.
+
+
+
+DJANGO AND SERVERS:
+-> Django is not a webserver.
+-> Django is a framework for python which knows how to work with incoming requests and create responses.
+-> it does not listen for incoming requests or handle any other server tasks.
+-> We need a dedicated web server for that.
+-> This is where the wsgi.py and asgi.py files become important.
+-> Requests are funneled by the webserver into one of these two files, and the file kicks off the entire application and makes sure Django can deal with the incoming requests.
+-> 'wsgi.py' is more commonly used.
+-> For more information about Django developement, read the official docs.
+e.g)
+https://docs.djangoproject.com/en/5.0/howto/deployment/
+
+
+
+SERVING STATIC FILES:
+-> 'python manage.py runserver' is a deployment-only server which handles static files serving. 
+-> However, after deploying, requests for static files and user uploads (basically static files after being uploaded) are not handled by default by Django.
+-> This is done to optimize the serving of static files.
+-> We can solve this in a couple of ways.
+
+-> The first way is to configure Django to serve such files(using urls.py)
+-> This is okay for smaller sites but is not performance optimized.
+
+-> The second and better option is to configure the web server to serve static files and Django app.
+-> This is better for performance.
+
+-> The third option is to use a dedicated service/server for static and uploaded files.
+-> Initial setup is more complex but offers best performance.
+
+
+
+HOSTING PROVIDERS FOR DEPLOYING DJANGO APPLICATIONS:
+-> One option for deploying Django applications is 'Digital Ocean'.
+-> Another option is 'AWS'.
+-> Another option could be 'Vercel'.
+-> We could also use 'Render'.
+
+
+
+REVISITING SETTINGS:
+-> The settings.py file has a 'SECRET_KEY' variable which is used by Django to assign cookies and for security relevant aspects in general.
+-> This key should be atleast 32 characters and random.
+-> This should be kept and secret and not pushed onto github, etc. Therefore it is generally better to use this as an environment variable.
+
+-> We should also set 'DEBUG' to 'False' as leaving it as True gives a more detailed error output(which we do not want to show to third party visitors).
+
+-> The 'ALLOWED_HOSTS' list contains the domain/domains under which we host our application.
+
+-> We change the 'DATABASES' dictionary, if we change our database from SQLite to something else.
+
+-> For more information on the settings, read the official docs.
+e.g)
+https://docs.djangoproject.com/en/5.0/topics/settings/
+
+
+
+COLLECTING STATIC FILES:
+-> Static files are all the files which we ship together with our Django application which are not our templates or python code.
+-> Examples are css, javascript, image and other such files.
+-> Django should be aware of the locations of the static files so that it can collect them.
+-> Django usually collects all static files from all the different apps and adds them in one folder which is served by either django or a dedicated static host.
+-> To specify where we want the collected files to be stored, in the 'settings.py' file, we add a 'STATIC_ROOT' variable and set it to a directory where all the static files will be stored.
+e.g)
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+-> Do not use the same directory for uploaded files and static files.
+-> Users can upload malicious javascript files which can destroy our application.
+
+-> Now to collect all the static files, we use this command.
+e.g)
+python manage.py collectstatic
+
+-> Do not make changes to the 'staticfiles' directory which contains all the files.
+-> Instead, make changes like we did previously during developement.
+
+-> We re-run the above command anytime we make changes to any static files.
+
+
+
+CONFIGURING DJANGO TO SERVE STATIC FILES:
+-> This is the easiest way to serve static files but not the best.
+-> To configure django to serve staticfiles, we do 
+e.g)
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('reviews.urls')),
+    path('profiles/', include('profiles.urls'))
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) \
+  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+
+
+USING WHITENOISE TO SERVE STATIC FILES:
+-> We can also use a third-party solution to serve static files.
+-> To install whitenoise, do
+e.g)
+pip install whitenoise
+-> Now, in the settings.py file, add the following line in the 'MIDDLEWARE' list.
+e.g)
+'whitenoise.middleware.WhiteNoiseMiddleware'
+
+
+
+VIRTUAL ENVIRONMENT SETUP:
+-> To install virtualenv, do:
+e.g)
+pip install virtualenv
+
+-> To set up a virtual environment, do:
+e.g)
+python -m venv <virtualenv_name>
+
+-> To activate the virtual environment, just do: (on bash terminal)
+e.g)
+source <virtualenv_name>\Scripts\activate 
+
+-> Install all necessary packages after activating the virtual environment.
+e.g)
+pip install django
+django-admin startproject <project_name> .          (This dot creates the django project in the same virtual environment folder)
+
+-> To deactivate the virtual environment, just do:
+e.g)
+deactivate
+
+-> To create a requirements.txt file, just run:
+e.g)
+pip freeze > requirements.txt
+
+-> To install these requirements, we do:
+e.g)
+pip install -r requirements.txt
+
+
+
+USING ENVIRONMENT VARIABLES:
+-> To use environment variables in python, we do
+e.g)
+from os import getenv
+ALLOWED_HOSTS = [
+    getenv("APP_HOST")
+]
+-> The environment variable which we provide to the hosting operator should be 'APP_HOST' in this case.
+
+-> If we want to provide default values, we can do
+e.g)
+DEBUG = getenv("IS_DEVELOPMENT", True)
+
+
+
+REDIRECTING IN THE MAIN URLS FILE:
+-> If in case we need to redirect from a route to another route everytime a certain route is hit, we can use the RedirectView in the main 'urls.py' list.
+e.g)
+from django.views.generic.base import RedirectView
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', RedirectView.as_view(url='/meetups')),
+    path('meetups/', include('meetups.urls))
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
